@@ -1,0 +1,19 @@
+{
+  "name": "quizforge",
+  "version": "0.1.0",
+  "description": "Cross-platform quiz application with SQLite question banks",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "tauri": "tauri"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2",
+    "vite": "^6"
+  },
+  "dependencies": {
+    "@tauri-apps/api": "^2",
+    "sql.js": "^1.12.0"
+  }
+}

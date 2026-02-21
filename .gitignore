@@ -1,0 +1,26 @@
+# Dependencies
+node_modules/
+
+# Build outputs
+dist/
+web/
+src-tauri/target/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Vite
+*.local
+
+# Quiz bank files (user data, not source)
+quiz-banks/*.db
+
+# Temp scripts
+create_sample_db.py
