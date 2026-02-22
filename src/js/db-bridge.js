@@ -104,26 +104,34 @@ export async function getTopics() {
   return rows[0].values.map(([v]) => v);
 }
 
+function getProgressKey() {
+  if (currentDbPath) return "qf_progress_" + currentDbPath;
+  return "qf_progress";
+}
+
 export async function saveProgress(questionId, answer, correct) {
   if (isTauri) return tauriInvoke("save_progress", { questionId, answer, correct });
-  let progress = JSON.parse(localStorage.getItem("qf_progress") || "{}");
+  const key = getProgressKey();
+  let progress = JSON.parse(localStorage.getItem(key) || "{}");
   const prev = progress[questionId] || { answered: 0, correct: 0 };
   progress[questionId] = {
     answered: prev.answered + 1,
     correct: prev.correct + (correct ? 1 : 0),
     last_answer: answer,
   };
-  localStorage.setItem("qf_progress", JSON.stringify(progress));
+  localStorage.setItem(key, JSON.stringify(progress));
 }
 
 export async function getProgress() {
   if (isTauri) return tauriInvoke("get_progress");
-  return JSON.parse(localStorage.getItem("qf_progress") || "{}");
+  const key = getProgressKey();
+  return JSON.parse(localStorage.getItem(key) || "{}");
 }
 
 export async function resetProgress() {
   if (isTauri) return tauriInvoke("reset_progress");
-  localStorage.removeItem("qf_progress");
+  const key = getProgressKey();
+  localStorage.removeItem(key);
 }
 
 export async function exportProgress() {
@@ -164,9 +172,10 @@ export async function importProgress(file) {
       }
     }
   } else {
-    const existing = JSON.parse(localStorage.getItem("qf_progress") || "{}");
+    const key = getProgressKey();
+    const existing = JSON.parse(localStorage.getItem(key) || "{}");
     Object.assign(existing, progress);
-    localStorage.setItem("qf_progress", JSON.stringify(existing));
+    localStorage.setItem(key, JSON.stringify(existing));
   }
 }
 
