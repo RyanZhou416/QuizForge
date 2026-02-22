@@ -31,7 +31,7 @@ __pycache__/
 *.pyc
 
 # Extracted images (generated, too large for repo)
-lower_ext_images/
+*_images/
 
 # Generated quiz JSON (intermediate files)
 lower_extremity_advanced.json
