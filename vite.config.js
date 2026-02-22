@@ -7,6 +7,9 @@ export default defineConfig({
   build: {
     outDir: "../dist",
     emptyOutDir: true,
+    rollupOptions: {
+      external: ["@tauri-apps/plugin-dialog", "@tauri-apps/api/event", "@tauri-apps/api/core"],
+    },
   },
   clearScreen: false,
   server: {

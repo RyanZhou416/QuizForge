@@ -6,6 +6,16 @@ let answers = {};
 let progressCache = {};
 let onChangeCallback = null;
 
+let examState = {
+  active: false,
+  timeLimit: 0,
+  startTime: null,
+  timerId: null,
+  questionCount: 0,
+  onTick: null,
+  onTimeUp: null,
+};
+
 export function onStateChange(cb) { onChangeCallback = cb; }
 function notify() { if (onChangeCallback) onChangeCallback(getState()); }
 
@@ -27,16 +37,35 @@ export function getState() {
   const total = questions.length;
   const answeredCount = Object.keys(answers).length;
   const correctCount = Object.values(answers).filter((a) => a.correct).length;
+
+  let historyAnswered = 0;
+  let historyCorrect = 0;
+  for (const p of Object.values(progressCache)) {
+    historyAnswered += (p.answered || 0);
+    historyCorrect += (p.correct || 0);
+  }
+
+  let maxAnsweredIndex = -1;
+  for (let i = questions.length - 1; i >= 0; i--) {
+    if (answers[questions[i].id]?.submitted) { maxAnsweredIndex = i; break; }
+  }
+
   return {
     total,
     currentIndex,
     answeredCount,
     correctCount,
+    maxAnsweredIndex,
     rate: answeredCount > 0 ? Math.round((correctCount / answeredCount) * 100) : null,
+    historyRate: historyAnswered > 0 ? Math.round((historyCorrect / historyAnswered) * 100) : null,
     hasNext: currentIndex < total - 1,
     hasPrev: currentIndex > 0,
     currentQuestion: questions[currentIndex] || null,
     currentAnswer: questions[currentIndex] ? answers[questions[currentIndex].id] : null,
+    questions,
+    answers,
+    progressCache,
+    examActive: examState.active,
   };
 }
 
@@ -51,6 +80,7 @@ export function goNext() {
 }
 
 export function goPrev() {
+  if (examState.active) return;
   if (currentIndex > 0) { currentIndex--; notify(); }
 }
 
@@ -91,6 +121,84 @@ export async function submitAnswer(questionId, options) {
   ans.correct = isCorrect;
 
   await db.saveProgress(questionId, ans.selected.join(","), isCorrect);
+  progressCache = await db.getProgress();
   notify();
   return ans;
 }
+
+export async function resetProgress() {
+  await db.resetProgress();
+  progressCache = {};
+  answers = {};
+  currentIndex = 0;
+  notify();
+}
+
+// ── Exam Mode ──
+
+export async function startExam(filters, timeMinutes, questionCount, onTick, onTimeUp) {
+  let allQuestions = await db.getQuestions(filters);
+  for (let i = allQuestions.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [allQuestions[i], allQuestions[j]] = [allQuestions[j], allQuestions[i]];
+  }
+
+  const count = Math.min(questionCount, allQuestions.length);
+  if (count === 0) return false;
+
+  questions = allQuestions.slice(0, count);
+  currentIndex = 0;
+  answers = {};
+
+  examState.active = true;
+  examState.timeLimit = timeMinutes * 60;
+  examState.startTime = Date.now();
+  examState.questionCount = count;
+  examState.onTick = onTick;
+  examState.onTimeUp = onTimeUp;
+
+  if (timeMinutes > 0) {
+    examState.timerId = setInterval(() => {
+      const elapsed = Math.floor((Date.now() - examState.startTime) / 1000);
+      const remaining = Math.max(0, examState.timeLimit - elapsed);
+      if (onTick) onTick(remaining, examState.timeLimit);
+      if (remaining <= 0) {
+        endExam();
+        if (onTimeUp) onTimeUp();
+      }
+    }, 1000);
+  }
+
+  notify();
+  return true;
+}
+
+export function endExam() {
+  if (examState.timerId) {
+    clearInterval(examState.timerId);
+    examState.timerId = null;
+  }
+  examState.active = false;
+  notify();
+}
+
+export function getExamResult() {
+  const elapsed = examState.startTime
+    ? Math.floor((Date.now() - examState.startTime) / 1000)
+    : 0;
+  const total = questions.length;
+  const answeredCount = Object.values(answers).filter((a) => a.submitted).length;
+  const correctCount = Object.values(answers).filter((a) => a.correct).length;
+  const score = total > 0 ? Math.round((correctCount / total) * 100) : 0;
+
+  return {
+    total,
+    answeredCount,
+    correctCount,
+    score,
+    elapsed,
+    passed: score >= 60,
+  };
+}
+
+export function isExamActive() { return examState.active; }

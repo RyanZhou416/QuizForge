@@ -49,6 +49,7 @@ pub struct Filters {
     #[serde(rename = "type")]
     pub q_type: Option<String>,
     pub difficulty: Option<String>,
+    pub keyword: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -67,7 +68,6 @@ impl QuizBank {
     pub fn open(path: &Path) -> Result<Self, String> {
         let conn = Connection::open(path).map_err(|e| e.to_string())?;
         conn.execute_batch("PRAGMA foreign_keys = ON;").map_err(|e| e.to_string())?;
-        // Ensure progress table exists
         conn.execute_batch(
             "CREATE TABLE IF NOT EXISTS progress (
                 question_id INTEGER PRIMARY KEY,
@@ -110,6 +110,12 @@ impl QuizBank {
         if let Some(ref d) = filters.difficulty {
             sql.push_str(" AND difficulty = ?");
             bind_values.push(d.clone());
+        }
+        if let Some(ref kw) = filters.keyword {
+            sql.push_str(" AND (question_zh LIKE ? OR question_en LIKE ?)");
+            let pattern = format!("%{}%", kw);
+            bind_values.push(pattern.clone());
+            bind_values.push(pattern);
         }
         sql.push_str(" ORDER BY id");
 
@@ -213,5 +219,11 @@ impl QuizBank {
             if let Ok(p) = row { map.insert(p.question_id, p); }
         }
         Ok(map)
+    }
+
+    pub fn clear_progress(&self) -> Result<(), String> {
+        self.conn.execute("DELETE FROM progress", [])
+            .map_err(|e| e.to_string())?;
+        Ok(())
     }
 }

@@ -7,13 +7,17 @@ let currentDbPath = null;
 export async function initBridge() {
   if (window.__TAURI_INTERNALS__) {
     isTauri = true;
-    const { invoke } = await import("@tauri-apps/api/core");
+    const coreMod = "@tauri-apps/" + "api/core";
+    const { invoke } = await import(/* @vite-ignore */ coreMod);
     tauriInvoke = invoke;
-    return;
   }
+}
+
+async function ensureSqlJs() {
+  if (sqlJs) return;
   const initSqlJs = (await import("sql.js")).default;
   sqlJs = await initSqlJs({
-    locateFile: (f) => `https://sql.js.org/dist/${f}`,
+    locateFile: () => "/sql-wasm.wasm",
   });
 }
 
@@ -29,6 +33,7 @@ export async function openBankFromPath(path) {
 }
 
 export async function openBankFromFile(file) {
+  await ensureSqlJs();
   const buf = await file.arrayBuffer();
   currentDb = new sqlJs.Database(new Uint8Array(buf));
   currentDbPath = file.name;
@@ -52,6 +57,11 @@ export async function getQuestions(filters = {}) {
   if (filters.topic) { sql += " AND topic = ?"; params.push(filters.topic); }
   if (filters.type) { sql += " AND type = ?"; params.push(filters.type); }
   if (filters.difficulty) { sql += " AND difficulty = ?"; params.push(filters.difficulty); }
+  if (filters.keyword) {
+    sql += " AND (question_zh LIKE ? OR question_en LIKE ?)";
+    const kw = `%${filters.keyword}%`;
+    params.push(kw, kw);
+  }
   sql += " ORDER BY id";
   const stmt = currentDb.prepare(sql);
   stmt.bind(params);
@@ -97,7 +107,12 @@ export async function getTopics() {
 export async function saveProgress(questionId, answer, correct) {
   if (isTauri) return tauriInvoke("save_progress", { questionId, answer, correct });
   let progress = JSON.parse(localStorage.getItem("qf_progress") || "{}");
-  progress[questionId] = { answered: 1, correct: correct ? 1 : 0, last_answer: answer };
+  const prev = progress[questionId] || { answered: 0, correct: 0 };
+  progress[questionId] = {
+    answered: prev.answered + 1,
+    correct: prev.correct + (correct ? 1 : 0),
+    last_answer: answer,
+  };
   localStorage.setItem("qf_progress", JSON.stringify(progress));
 }
 
@@ -106,11 +121,39 @@ export async function getProgress() {
   return JSON.parse(localStorage.getItem("qf_progress") || "{}");
 }
 
+export async function resetProgress() {
+  if (isTauri) return tauriInvoke("reset_progress");
+  localStorage.removeItem("qf_progress");
+}
+
+let webBankFiles = [];
+
 export async function getBankList() {
   if (isTauri) return tauriInvoke("get_bank_list");
-  return [];
+  return webBankFiles.map((f) => ({
+    path: f.name,
+    title: f.name.replace(/\.db$/i, ""),
+  }));
+}
+
+export async function addWebBankFiles(files) {
+  for (const f of files) {
+    if (!webBankFiles.some((b) => b.name === f.name)) {
+      webBankFiles.push(f);
+    }
+  }
+}
+
+export async function openWebBankByName(name) {
+  const file = webBankFiles.find((f) => f.name === name);
+  if (!file) throw new Error("Bank not found: " + name);
+  await openBankFromFile(file);
 }
 
 export function isLoaded() {
   return isTauri ? !!currentDbPath : !!currentDb;
+}
+
+export function getCurrentBankPath() {
+  return currentDbPath;
 }

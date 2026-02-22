@@ -73,6 +73,13 @@ pub fn get_progress(state: State<AppState>) -> Result<HashMap<i64, ProgressEntry
 }
 
 #[tauri::command]
+pub fn reset_progress(state: State<AppState>) -> Result<(), String> {
+    let guard = state.current_bank.lock();
+    let bank = guard.as_ref().ok_or("No bank loaded")?;
+    bank.clear_progress()
+}
+
+#[tauri::command]
 pub fn get_bank_list(state: State<AppState>) -> Result<Vec<BankInfo>, String> {
     let folders = state.watch_folders.lock();
     let mut banks = Vec::new();

@@ -6,7 +6,7 @@ mod watcher;
 
 use commands::AppState;
 use parking_lot::Mutex;
-use std::path::PathBuf;
+use tauri::Manager;
 
 fn main() {
     tauri::Builder::default()
@@ -38,6 +38,7 @@ fn main() {
             commands::get_topics,
             commands::save_progress,
             commands::get_progress,
+            commands::reset_progress,
             commands::get_bank_list,
             commands::add_watch_folder,
             commands::remove_watch_folder,

@@ -1,5 +1,5 @@
 {
-  "$schema": "https://raw.githubusercontent.com/nicegui/tauri-v2-raw/refs/heads/main/schemas/desktop-schema.json",
+  "$schema": "https://raw.githubusercontent.com/tauri-apps/tauri/dev/crates/tauri-cli/schema.json",
   "productName": "QuizForge",
   "identifier": "com.quizforge.app",
   "version": "0.1.0",
@@ -10,7 +10,6 @@
     "beforeBuildCommand": "npm run build"
   },
   "app": {
-    "title": "QuizForge",
     "windows": [
       {
         "title": "QuizForge",
@@ -36,7 +35,6 @@
     ]
   },
   "plugins": {
-    "dialog": {},
     "shell": { "open": true }
   }
 }

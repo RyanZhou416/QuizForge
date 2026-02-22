@@ -1,0 +1,9 @@
+services:
+  quizforge:
+    build: .
+    image: ghcr.io/ryanzhou416/quizforge:latest
+    ports:
+      - "8080:80"
+    volumes:
+      - ./quiz-banks:/srv/quiz-banks
+    restart: unless-stopped

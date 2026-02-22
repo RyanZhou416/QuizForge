@@ -20,7 +20,24 @@ Thumbs.db
 *.local
 
 # Quiz bank files (user data, not source)
-quiz-banks/*.db
+quiz-banks/
+*.db
+
+# Docker runtime data
+quiz-banks/
+
+# Python
+__pycache__/
+*.pyc
+
+# Extracted images (generated, too large for repo)
+lower_ext_images/
+
+# Generated quiz JSON (intermediate files)
+lower_extremity_advanced.json
 
 # Temp scripts
 create_sample_db.py
+
+# App icon source (generated icons are in src-tauri/icons/)
+app-icon.png
