@@ -32,6 +32,7 @@ fn main() {
         })
         .invoke_handler(tauri::generate_handler![
             commands::open_bank,
+            commands::close_bank,
             commands::get_bank_meta,
             commands::get_questions,
             commands::get_question_detail,
@@ -42,6 +43,7 @@ fn main() {
             commands::get_bank_list,
             commands::add_watch_folder,
             commands::remove_watch_folder,
+            commands::remove_bank_by_path,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

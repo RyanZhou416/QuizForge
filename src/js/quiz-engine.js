@@ -19,6 +19,33 @@ let examState = {
 export function onStateChange(cb) { onChangeCallback = cb; }
 function notify() { if (onChangeCallback) onChangeCallback(getState()); }
 
+function cacheKey() {
+  const bp = db.getCurrentBankPath();
+  return bp ? `qf_session_${bp}` : null;
+}
+
+function saveSessionCache() {
+  const key = cacheKey();
+  if (!key || examState.active) return;
+  try {
+    localStorage.setItem(key, JSON.stringify({ answers, currentIndex }));
+  } catch (_) { /* quota exceeded */ }
+}
+
+function loadSessionCache() {
+  const key = cacheKey();
+  if (!key) return null;
+  try {
+    const raw = localStorage.getItem(key);
+    return raw ? JSON.parse(raw) : null;
+  } catch (_) { return null; }
+}
+
+function clearSessionCache() {
+  const key = cacheKey();
+  if (key) localStorage.removeItem(key);
+}
+
 export async function loadQuestions(filters = {}, shuffle = false) {
   questions = await db.getQuestions(filters);
   if (shuffle) {
@@ -28,14 +55,22 @@ export async function loadQuestions(filters = {}, shuffle = false) {
     }
   }
   progressCache = await db.getProgress();
-  currentIndex = 0;
-  answers = {};
+
+  const cached = loadSessionCache();
+  if (cached && !shuffle && Object.keys(filters).every((k) => !filters[k])) {
+    answers = cached.answers || {};
+    currentIndex = Math.min(cached.currentIndex || 0, questions.length - 1);
+  } else {
+    currentIndex = 0;
+    answers = {};
+  }
+
   notify();
 }
 
 export function getState() {
   const total = questions.length;
-  const answeredCount = Object.keys(answers).length;
+  const answeredCount = Object.values(answers).filter((a) => a.submitted).length;
   const correctCount = Object.values(answers).filter((a) => a.correct).length;
 
   let historyAnswered = 0;
@@ -76,16 +111,16 @@ export async function getCurrentDetail() {
 }
 
 export function goNext() {
-  if (currentIndex < questions.length - 1) { currentIndex++; notify(); }
+  if (currentIndex < questions.length - 1) { currentIndex++; saveSessionCache(); notify(); }
 }
 
 export function goPrev() {
   if (examState.active) return;
-  if (currentIndex > 0) { currentIndex--; notify(); }
+  if (currentIndex > 0) { currentIndex--; saveSessionCache(); notify(); }
 }
 
 export function goTo(index) {
-  if (index >= 0 && index < questions.length) { currentIndex = index; notify(); }
+  if (index >= 0 && index < questions.length) { currentIndex = index; saveSessionCache(); notify(); }
 }
 
 export function selectOption(questionId, optionLabel) {
@@ -122,12 +157,14 @@ export async function submitAnswer(questionId, options) {
 
   await db.saveProgress(questionId, ans.selected.join(","), isCorrect);
   progressCache = await db.getProgress();
+  saveSessionCache();
   notify();
   return ans;
 }
 
 export async function resetProgress() {
   await db.resetProgress();
+  clearSessionCache();
   progressCache = {};
   answers = {};
   currentIndex = 0;
@@ -202,3 +239,12 @@ export function getExamResult() {
 }
 
 export function isExamActive() { return examState.active; }
+
+export function reset() {
+  endExam();
+  questions = [];
+  currentIndex = 0;
+  answers = {};
+  progressCache = {};
+  notify();
+}

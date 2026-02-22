@@ -31,7 +31,10 @@
       <!-- Sidebar -->
       <aside id="sidebar" class="sidebar">
         <div class="sidebar-section">
-          <h3 data-i18n="banks">题库列表</h3>
+          <div class="section-header">
+            <h3 data-i18n="banks">题库列表</h3>
+            <button id="close-bank-btn" class="close-bank-btn" data-i18n="close_bank" title="关闭题库" style="display:none">✕ 关闭</button>
+          </div>
           <div id="bank-meta" class="bank-meta" style="display:none">
             <div class="bank-meta-title" id="bank-meta-title"></div>
             <div class="bank-meta-desc" id="bank-meta-desc"></div>
@@ -75,7 +78,7 @@
           <div class="stat-row"><span data-i18n="answered">已答</span><span id="stat-answered">0/0</span></div>
           <div class="stat-row"><span data-i18n="correct_rate">正确率</span><span id="stat-rate">--%</span></div>
           <div class="stat-row"><span data-i18n="history_rate">历史正确率</span><span id="stat-history-rate">--%</span></div>
-          <button id="reset-progress-btn" class="action-btn" data-i18n="reset_progress" style="display:none">重置进度</button>
+          <button id="reset-progress-btn" class="action-btn reset-btn" data-i18n="reset_progress" style="display:none">重置进度</button>
         </div>
 
         <div class="sidebar-section" id="grid-section" style="display:none">

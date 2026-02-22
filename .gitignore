@@ -35,6 +35,7 @@ lower_ext_images/
 
 # Generated quiz JSON (intermediate files)
 lower_extremity_advanced.json
+csi3131_mod2_processes.json
 
 # Temp scripts
 create_sample_db.py

@@ -1,9 +1,11 @@
 services:
   quizforge:
-    build: .
-    image: ghcr.io/ryanzhou416/quizforge:latest
+    image: caddy:2-alpine
+    container_name: quizforge
     ports:
-      - "8080:80"
+      - "5666:80"
     volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./dist:/srv
       - ./quiz-banks:/srv/quiz-banks
     restart: unless-stopped

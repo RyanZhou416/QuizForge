@@ -127,13 +127,42 @@ export function renderBankList(banks, activePath) {
     const div = document.createElement("div");
     div.className = "bank-item";
     if (bank.path === activePath) div.classList.add("active");
-    div.textContent = bank.title || bank.path;
-    div.dataset.path = bank.path;
-    div.addEventListener("click", () => {
+
+    const nameSpan = document.createElement("span");
+    nameSpan.className = "bank-item-name";
+    nameSpan.textContent = bank.title || bank.path;
+    nameSpan.addEventListener("click", () => {
       div.dispatchEvent(new CustomEvent("bank-select", { bubbles: true, detail: bank.path }));
     });
+
+    const deleteBtn = document.createElement("button");
+    deleteBtn.className = "bank-delete-btn";
+    deleteBtn.title = t("delete_bank");
+    deleteBtn.textContent = "×";
+    deleteBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      div.dispatchEvent(new CustomEvent("bank-delete", { bubbles: true, detail: bank.path }));
+    });
+
+    div.dataset.path = bank.path;
+    div.appendChild(nameSpan);
+    div.appendChild(deleteBtn);
     list.appendChild(div);
   });
+}
+
+export function resetQuizUI() {
+  showQuiz(false);
+  $("#bank-meta").style.display = "none";
+  $("#exam-mode-btn").style.display = "none";
+  $("#reset-progress-btn").style.display = "none";
+  $("#grid-section").style.display = "none";
+  $("#stat-answered").textContent = "0/0";
+  $("#stat-rate").textContent = "--%";
+  $("#stat-history-rate").textContent = "--%";
+  $("#progress-bar").style.width = "0%";
+  const sel = $("#filter-topic");
+  while (sel.options.length > 1) sel.remove(1);
 }
 
 export function renderBankMeta(meta) {

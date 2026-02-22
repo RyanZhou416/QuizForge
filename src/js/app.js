@@ -1,4 +1,4 @@
-import { initBridge, openBankFromFile, openBankFromPath, openWebBankByName, addWebBankFiles, getTopics, getBankMeta, getBankList, getCurrentBankPath, resetProgress as dbResetProgress, isLoaded, getMode } from "./db-bridge.js";
+import { initBridge, openBankFromFile, openBankFromPath, openWebBankByName, addWebBankFiles, getTopics, getBankMeta, getBankList, getCurrentBankPath, isLoaded, getMode, closeBank, removeWebBank } from "./db-bridge.js";
 import * as engine from "./quiz-engine.js";
 import * as ui from "./ui.js";
 import { applyI18n, toggleLang, t } from "./i18n.js";
@@ -32,6 +32,7 @@ async function loadBank() {
     await engine.loadQuestions(getFilters(), $("#shuffle-toggle").checked);
     ui.showQuiz(true);
     $("#exam-mode-btn").style.display = "";
+    $("#close-bank-btn").style.display = "";
     await refreshQuestion();
     showToast(t("bank_opened"), "success");
   } catch (e) {
@@ -224,6 +225,49 @@ async function init() {
     } catch (err) {
       showToast(err.message || String(err), "error");
     }
+  });
+
+  // ── Close bank ──
+  $("#close-bank-btn").addEventListener("click", async () => {
+    if (!isLoaded()) return;
+    await closeBank();
+    engine.reset();
+    currentDetail = null;
+    ui.resetQuizUI();
+    $("#close-bank-btn").style.display = "none";
+    await refreshBankList();
+    showToast(t("bank_closed"), "success");
+  });
+
+  // ── Delete bank from list ──
+  document.addEventListener("bank-delete", async (e) => {
+    if (!confirm(t("delete_bank_confirm"))) return;
+    const bankPath = e.detail;
+    const isCurrent = bankPath === getCurrentBankPath();
+
+    if (getMode() === "desktop") {
+      try {
+        const coreMod = "@tauri-apps/" + "api/core";
+        const { invoke } = await import(/* @vite-ignore */ coreMod);
+        await invoke("remove_bank_by_path", { bankPath });
+      } catch (err) {
+        showToast(err.message || String(err), "error");
+        return;
+      }
+    } else {
+      await removeWebBank(bankPath);
+    }
+
+    if (isCurrent) {
+      await closeBank();
+      engine.reset();
+      currentDetail = null;
+      ui.resetQuizUI();
+      $("#close-bank-btn").style.display = "none";
+    }
+
+    await refreshBankList();
+    showToast(t("bank_deleted"), "success");
   });
 
   // ── Option selection ──

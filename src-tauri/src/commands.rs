@@ -26,6 +26,12 @@ pub fn open_bank(path: String, state: State<AppState>) -> Result<(), String> {
 }
 
 #[tauri::command]
+pub fn close_bank(state: State<AppState>) -> Result<(), String> {
+    *state.current_bank.lock() = None;
+    Ok(())
+}
+
+#[tauri::command]
 pub fn get_bank_meta(state: State<AppState>) -> Result<HashMap<String, String>, String> {
     let guard = state.current_bank.lock();
     let bank = guard.as_ref().ok_or("No bank loaded")?;
@@ -113,6 +119,18 @@ pub fn remove_watch_folder(path: String, state: State<AppState>) -> Result<(), S
     let mut folders = state.watch_folders.lock();
     folders.retain(|f| f.to_string_lossy() != path);
     save_settings(&state);
+    Ok(())
+}
+
+#[tauri::command]
+pub fn remove_bank_by_path(bank_path: String, state: State<AppState>) -> Result<(), String> {
+    let bp = PathBuf::from(&bank_path);
+    if let Some(parent) = bp.parent() {
+        let mut folders = state.watch_folders.lock();
+        folders.retain(|f| f != parent);
+        drop(folders);
+        save_settings(&state);
+    }
     Ok(())
 }
 

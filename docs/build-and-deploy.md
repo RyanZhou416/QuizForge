@@ -9,9 +9,10 @@
   - [macOS](#macos)
 - [构建 Web 版本](#构建-web-版本)
 - [Docker 部署](#docker-部署)
-  - [Docker 直接运行](#docker-直接运行)
-  - [Docker Compose](#docker-compose)
+  - [方式一：Volume 挂载（推荐）](#方式一volume-挂载推荐)
+  - [方式二：Docker 构建镜像](#方式二docker-构建镜像)
   - [自定义题库目录](#自定义题库目录)
+  - [更新部署](#更新部署)
 - [CI/CD 自动发布](#cicd-自动发布)
   - [触发构建](#触发构建)
   - [产物说明](#产物说明)
@@ -127,10 +128,42 @@ npx vite preview
 
 Web 版本使用 Caddy 作为静态服务器，支持 SPA 路由、gzip 压缩和静态资源长缓存。
 
-### Docker 直接运行
+### 方式一：Volume 挂载（推荐）
+
+直接使用官方 Caddy 镜像，通过 volume 挂载 dist 和 Caddyfile。优势是更新时只需上传文件并重启容器，无需重新构建镜像。
+
+```yaml
+# docker-compose.yml
+services:
+  quizforge:
+    image: caddy:2-alpine
+    container_name: quizforge
+    ports:
+      - "5666:80"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./dist:/srv
+      - ./quiz-banks:/srv/quiz-banks
+    restart: unless-stopped
+```
+
+```bash
+# 首次部署
+npm run build
+docker compose up -d
+
+# 更新部署（重新构建前端后）
+npm run build
+docker compose restart
+```
+
+### 方式二：Docker 构建镜像
+
+将 dist 打包进镜像，适合 CI/CD 或不方便挂载文件的场景。
 
 ```bash
 # 构建镜像
+npm run build
 docker build -t quizforge .
 
 # 运行容器
@@ -140,26 +173,6 @@ docker run -d \
   -v $(pwd)/quiz-banks:/srv/quiz-banks \
   quizforge
 ```
-
-访问 `http://localhost:8080`。
-
-### Docker Compose
-
-```bash
-# 构建并启动
-docker compose up -d
-
-# 查看日志
-docker compose logs -f
-
-# 停止
-docker compose down
-
-# 重新构建（代码更新后）
-docker compose up -d --build
-```
-
-默认端口映射为 `8080:80`，可在 `docker-compose.yml` 中修改。
 
 ### 自定义题库目录
 
@@ -171,6 +184,28 @@ docker compose up -d --build
 
 # 自定义路径
 docker run -d -p 8080:80 -v /path/to/your/banks:/srv/quiz-banks quizforge
+```
+
+### 更新部署
+
+**Volume 挂载方式：**
+
+```bash
+# 本地构建
+npm run build
+
+# 上传到服务器（如通过 scp）
+scp -r dist/* server:~/quizforge/dist/
+
+# 服务器上重启容器即可（dist 已通过 volume 挂载）
+docker compose restart
+```
+
+**镜像构建方式：**
+
+```bash
+# 需要重新构建镜像
+docker compose up -d --build
 ```
 
 ---

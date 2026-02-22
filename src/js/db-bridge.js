@@ -126,6 +126,50 @@ export async function resetProgress() {
   localStorage.removeItem("qf_progress");
 }
 
+export async function exportProgress() {
+  const progress = await getProgress();
+  const bankName = currentDbPath ? currentDbPath.replace(/^.*[\\/]/, "").replace(/\.db$/i, "") : "quizforge";
+  const data = {
+    bank: currentDbPath || "unknown",
+    exportedAt: new Date().toISOString(),
+    progress,
+  };
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `${bankName}_progress_${new Date().toISOString().slice(0, 10)}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+export async function importProgress(file) {
+  const text = await file.text();
+  const data = JSON.parse(text);
+  const progress = data.progress || data;
+  if (typeof progress !== "object" || progress === null) {
+    throw new Error("Invalid progress format");
+  }
+  if (isTauri) {
+    for (const [qid, entry] of Object.entries(progress)) {
+      const id = parseInt(qid, 10);
+      if (isNaN(id)) continue;
+      for (let i = 0; i < (entry.answered || 1); i++) {
+        const isCorrect = i < (entry.correct || 0);
+        await tauriInvoke("save_progress", {
+          questionId: id,
+          answer: entry.last_answer || "",
+          correct: isCorrect,
+        });
+      }
+    }
+  } else {
+    const existing = JSON.parse(localStorage.getItem("qf_progress") || "{}");
+    Object.assign(existing, progress);
+    localStorage.setItem("qf_progress", JSON.stringify(existing));
+  }
+}
+
 let webBankFiles = [];
 
 export async function getBankList() {
@@ -148,6 +192,21 @@ export async function openWebBankByName(name) {
   const file = webBankFiles.find((f) => f.name === name);
   if (!file) throw new Error("Bank not found: " + name);
   await openBankFromFile(file);
+}
+
+export async function closeBank() {
+  if (isTauri) {
+    await tauriInvoke("close_bank");
+  } else if (currentDb) {
+    currentDb.close();
+    currentDb = null;
+  }
+  currentDbPath = null;
+}
+
+export async function removeWebBank(name) {
+  if (isTauri) return;
+  webBankFiles = webBankFiles.filter((f) => f.name !== name);
 }
 
 export function isLoaded() {
