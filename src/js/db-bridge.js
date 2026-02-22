@@ -119,7 +119,14 @@ export async function saveProgress(questionId, answer, correct) {
     correct: prev.correct + (correct ? 1 : 0),
     last_answer: answer,
   };
-  localStorage.setItem(key, JSON.stringify(progress));
+  try {
+    localStorage.setItem(key, JSON.stringify(progress));
+  } catch (e) {
+    console.error("Failed to save progress:", e);
+    if (e.name === "QuotaExceededError" || e.code === 22) {
+      alert("Local storage is full. Progress cannot be saved. Please export your progress and clear browser data.");
+    }
+  }
 }
 
 export async function getProgress() {
