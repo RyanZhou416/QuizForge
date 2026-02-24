@@ -1,6 +1,8 @@
 # QuizForge 题库生成魔咒
 
-将本文件和你的学习资料（PDF/文档/笔记）一起发送给 AI，即可生成标准 JSON 题库。然后用 `json_to_db.py` 脚本转换为 `.db` 文件。
+将本文件和你的学习资料（PDF/文档/笔记）一起发送给 AI，即可生成标准 JSON 题库。然后用 `json_to_db.py`（位于 `c:\Project\QuizForge\`）转换为 `.db` 文件。**禁止从零重写转换脚本**，必须使用 QuizForge 项目自带的版本。
+
+工作目录应该是学习资料的目录，图片放在images/<项目名>，不要把文件放入c:\Project\QuizForge\
 
 ---
 
@@ -335,14 +337,58 @@ explanation_zh 也填写英文。
 
 ---
 
+## QuizForge SQLite 数据库 Schema（重要）
+
+`json_to_db.py` 转换脚本位于 QuizForge 项目目录（`c:\Project\QuizForge\json_to_db.py`）。如果当前工作目录没有此脚本，**必须从 QuizForge 项目复制，禁止从零重写**。
+
+以下是 QuizForge 要求的 `.db` 表结构，生成的数据库**必须严格遵守**：
+
+```sql
+CREATE TABLE IF NOT EXISTS meta (
+    key   TEXT PRIMARY KEY,
+    value TEXT
+);
+
+CREATE TABLE IF NOT EXISTS questions (
+    id             INTEGER PRIMARY KEY AUTOINCREMENT,
+    type           TEXT NOT NULL,       -- 'single' | 'multiple' | 'truefalse'
+    topic          TEXT,
+    difficulty     TEXT,                -- 'easy' | 'medium' | 'hard'
+    question_zh    TEXT NOT NULL,
+    question_en    TEXT,
+    image_path     TEXT,                -- base64 data URI 或 null，列名必须是 image_path
+    explanation_zh TEXT,
+    explanation_en TEXT
+);
+
+CREATE TABLE IF NOT EXISTS options (
+    id             INTEGER PRIMARY KEY AUTOINCREMENT,
+    question_id    INTEGER NOT NULL REFERENCES questions(id),
+    label          TEXT NOT NULL,       -- 'A'/'B'/'C'/'D' 或 'True'/'False'
+    text_zh        TEXT NOT NULL,
+    text_en        TEXT,
+    is_correct     INTEGER NOT NULL DEFAULT 0,
+    explanation_zh TEXT,
+    explanation_en TEXT,
+    sort_order     INTEGER NOT NULL DEFAULT 0   -- 选项排序，从 0 开始
+);
+```
+
+**易错点提醒：**
+- `questions.image_path` 列名**必须**是 `image_path`（不是 `image_data`、`image` 或其他名称）
+- `options` 表**必须**包含 `sort_order` 列
+- 图片通过 `json_to_db.py` 自动转换为 base64 data URI 存入 `image_path` 列
+
+---
+
 ## 完整工作流速查
 
 ### 纯文字题库
 
 ```bash
 # 1. 将学习资料 + 基础版魔咒发给 AI -> 得到 quiz.json
-# 2. 转换
-python json_to_db.py quiz.json
+# 2. 转换（脚本位于 QuizForge 项目目录）
+python c:\Project\QuizForge\json_to_db.py quiz.json
 # 3. 拖入 QuizForge
 ```
 
@@ -350,12 +396,12 @@ python json_to_db.py quiz.json
 
 ```bash
 # 1. 提取 PDF 图片
-python extract_pdf_images.py "你的资料.pdf" images
+python c:\Project\QuizForge\extract_pdf_images.py "你的资料.pdf" images
 
 # 2. 在 Cursor 中: 带图片版魔咒 + @资料文件 + @images 文件夹 -> 得到 quiz.json
 
 # 3. 转换（-i 指定图片目录，图片自动嵌入为 base64）
-python json_to_db.py quiz.json -i images
+python c:\Project\QuizForge\json_to_db.py quiz.json -i images
 
 # 4. 拖入 QuizForge（.db 自包含所有图片，无需额外文件）
 ```
