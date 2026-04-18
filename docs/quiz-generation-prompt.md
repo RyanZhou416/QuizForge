@@ -51,7 +51,7 @@
 【题型分布】
 - single（单选题）：约 60%，4 个选项 A/B/C/D
 - multiple（多选题）：约 25%，4 个选项 A/B/C/D，2-3 个正确答案
-- truefalse（判断题）：约 15%，2 个选项 True/False
+- truefalse（判断题）：约 15%，**有且只有 2 个选项**，`label` 必须分别是字符串 `"True"` 和 `"False"`（**不要写成 `"A"`/`"B"`，否则前端无法渲染按钮**），第一个选项是 True、第二个是 False
 
 【难度分布】
 - easy：约 30%（定义、基本概念）
@@ -187,7 +187,7 @@
 【题型分布】
 - single（单选题）：约 60%，4 个选项 A/B/C/D
 - multiple（多选题）：约 25%，4 个选项 A/B/C/D，2-3 个正确答案
-- truefalse（判断题）：约 15%，2 个选项 True/False
+- truefalse（判断题）：约 15%，**有且只有 2 个选项**，`label` 必须分别是字符串 `"True"` 和 `"False"`（**不要写成 `"A"`/`"B"`，否则前端无法渲染按钮**），第一个选项是 True、第二个是 False
 
 【难度分布】
 - easy：约 30%（定义、基本概念）
@@ -364,7 +364,7 @@ CREATE TABLE IF NOT EXISTS questions (
 CREATE TABLE IF NOT EXISTS options (
     id             INTEGER PRIMARY KEY AUTOINCREMENT,
     question_id    INTEGER NOT NULL REFERENCES questions(id),
-    label          TEXT NOT NULL,       -- 'A'/'B'/'C'/'D' 或 'True'/'False'
+    label          TEXT NOT NULL,       -- single/multiple 用 'A'/'B'/'C'/'D'；truefalse 必须用 'True'/'False'（不能用 A/B，UI 靠这个区分按钮）
     text_zh        TEXT NOT NULL,
     text_en        TEXT,
     is_correct     INTEGER NOT NULL DEFAULT 0,
