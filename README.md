@@ -75,14 +75,28 @@ npm run build
 Use the magic prompt in [`docs/quiz-generation-prompt.md`](docs/quiz-generation-prompt.md) to have an AI generate quiz content as JSON, then convert to `.db`:
 
 ```bash
-# Generate JSON with AI (follow the prompt instructions)
-# Convert to .db
+# 1. Generate JSON with AI (follow the prompt instructions)
+
+# 2. Quality self-check — diagnose answer-position bias, "三短一长"
+#    distractor length skew, multi-select count monotony, T/F imbalance.
+#    Highly recommended before converting to .db.
+python analyze_quiz_balance.py quiz.json
+
+# 3. Convert to .db
 python json_to_db.py quiz.json -o quiz.db
 
 # With images (extract from PDF first)
 python extract_pdf_images.py input.pdf -o images/
 python json_to_db.py quiz.json -o quiz.db -i images/
 ```
+
+**Quiz quality tooling**:
+
+| Script | Purpose |
+|---|---|
+| `extract_pdf_images.py` | Extract embedded images from a PDF for image-based questions |
+| `analyze_quiz_balance.py` | Diagnose AI-generated quizzes for "guessable" patterns (uneven A/B/C/D distribution, distractor length bias, monotone multi-select counts, T/F imbalance) |
+| `json_to_db.py` | Convert validated JSON quiz to a SQLite `.db` (auto-embeds images as base64) |
 
 ### Method 2: Manual
 
